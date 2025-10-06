@@ -8,6 +8,11 @@
 
 
 """ 
+ADDITIONAL NOTES/CHANGES:
+
+Added a helper function delete_at that deletes from the underlying
+array at given index and then restores heap order from that point
+
 A struct to represent a basic array-based max-heap.
 
 T -> can be any type which implements comparison (e.g., integers, reals etc.)
@@ -215,3 +220,29 @@ function _down_heap!(h::Heap, i::Integer)
         i = j
     end
 end
+
+"""
+Code inspired from my implementation of a PQ in COMP3506
+
+The calling of this function assumes the necessary conditions regarding
+zero checks have been made.
+"""
+function delete_at!(h::Heap, i::Integer)
+    heap_length = length(h)
+    # if the thing we are removing is the last element, yeet it
+    if i == heap_length
+        pop!(h.data)
+        return
+    end
+
+    # swap the thing we want to delete with the last term
+    h.data[i] = pop!(h.data)
+
+    # restore heap order - dont need to go up because heap is ordered by degree
+    # so no coefficient comparison necessary
+
+    # downheap on the element index we swapped since we mucked around with
+    # heap order. My PQ code is provided 
+    _down_heap!(h, i)
+end
+

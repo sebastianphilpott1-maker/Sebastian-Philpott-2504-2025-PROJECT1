@@ -11,8 +11,8 @@
 Test factorization of polynomials.
 """
 function factor_mod_p_test_poly(::Type{P};
-    N::Int = 10, seed::Int = 0, primes::Vector{Int} = [5,7,11]
-    ) where {P <: Polynomial}
+    N::Int = 10, seed::Int = 0, primes::Vector{Int} = [5, 7, 11]
+    ) where {C, D, P <: Polynomial{C, D}}
     Random.seed!(seed)
     for prime in primes
         print("\ndoing prime = $prime \t")
@@ -23,8 +23,8 @@ function factor_mod_p_test_poly(::Type{P};
             p = rand(P; monic = true)
 
             factorization = factor_mod_p(p, prime)
-            pr = mod(expand_factorization(factorization),prime)
-            @assert mod(p-pr,prime) == 0 
+            pr = expand_factorization(factorization)
+            @assert mod(p-pr, prime) == 0
         end
     end
 

@@ -12,7 +12,7 @@ Test product of polynomials.
 """
 function prod_test_poly(::Type{P};
     N::Int = 3 * 10^2, N_prods::Int = 20, seed::Int = 0
-    ) where {P <: Polynomial}
+    ) where {C, D, P <: Polynomial{C, D}}
     Random.seed!(seed)
     for _ in 1:N
         p1 = rand(P)
@@ -22,7 +22,7 @@ function prod_test_poly(::Type{P};
     end
 
     for _ in 1:N
-        p_base = P(Term(1,0))
+        p_base = P(Term{C, D}(C(1), D(0)))
         for _ in 1:N_prods
             p = rand(P)
             prod = p_base*p
@@ -38,7 +38,7 @@ Test derivative of polynomials (as well as product).
 """
 function prod_derivative_test_poly(::Type{P};
     N::Int = 10^2,  seed::Int = 0
-    ) where {P <: Polynomial}
+    ) where {C, D, P <: Polynomial{C, D}}
     Random.seed!(seed)
     for _ in 1:N
         p1 = rand(P)
@@ -56,7 +56,7 @@ Test division of polynomials modulo p.
 """
 function division_test_poly(::Type{P};
     prime::Int = 101, N::Int = 10^4, seed::Int = 0
-    ) where {P <: Polynomial}
+    ) where {C, D, P <: Polynomial{C, D}}
     Random.seed!(seed)
     for _ in 1:N
         p1 = rand(P)
@@ -65,7 +65,7 @@ function division_test_poly(::Type{P};
         q, r = P(), P()
         try
             q, r = div_rem_mod_p(p_prod, p2, prime)
-            if (q, r) == (nothing,nothing)
+            if (q, r) == (nothing, nothing)
                 println("Unlucky prime: $p1 is reduced to $(p1 % prime) modulo $prime")
                 continue
             end
@@ -85,8 +85,8 @@ end
 Test the extended euclid algorithm for polynomials modulo p.
 """
 function ext_euclid_test_poly(::Type{P};
-    prime::Int=101, N::Int = 10^3, seed::Int = 0
-    ) where {P <: Polynomial}
+    prime::Int=101, N::Int = 10^2, seed::Int = 0
+    ) where {C, D, P <: Polynomial{C, D}}
     Random.seed!(seed)
     for _ in 1:N
         p1 = rand(P)

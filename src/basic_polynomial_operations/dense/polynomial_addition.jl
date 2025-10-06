@@ -9,7 +9,7 @@
 """
 Add a polynomial and a term.
 """
-function +(p::PolynomialDense, t::Term)
+function +(p::PolynomialDense{C, D}, t::Term{C, D}) where {C, D}
     p = deepcopy(p)
     if t.degree > degree(p)
         push!(p, t)

@@ -36,6 +36,7 @@ function Term(coeff::C, degree::D) where {C, D}
     Term{C, D}(coeff, degree)
 end
 
+
 """
 Creates the zero term.
 """
@@ -59,7 +60,7 @@ one(t::Term) = one(typeof(t))
 """
 Show a term.
 """
-show(io::IO, t::Term) = print(io, "$(t.coeff)⋅x^$(t.degree)")
+show(io::IO, t::Term) = print(io, "$(t.coeff)x^$(t.degree)")
 
 ########################
 # Queries about a term #
@@ -77,7 +78,12 @@ function isless(t1::Term{C, D}, t2::Term{C, D})::Bool  where {C, D}
     t1.degree == t2.degree ? (t1.coeff < t2.coeff) : (t1.degree < t2.degree)  
 end
 
+
 function (==)(t1::Term{C, D}, t2::Term{C, D}) where {C, D}
+    # Without this zmodp comparison fails
+    if iszero(t1) && iszero(t2)
+        return true
+    end
     t1.coeff == t2.coeff && t1.degree == t2.degree
 end
 
@@ -95,16 +101,16 @@ end
 """
 Add two terms of the same degree (with the same coefficient/degree types).
 """
-function +(t1::Term{C, D},t2::Term{C, D})::Term{C, D} where {C, D}
+function +(t1::Term{C, D}, t2::Term{C, D})::Term{C, D} where {C, D}
     @assert t1.degree == t2.degree
-    Term(t1.coeff + t2.coeff, t1.degree)
+    Term{C, D}(t1.coeff + t2.coeff, t1.degree)
 end
 
 """
 Negate a term.
 """
 function -(t::Term{C, D},)::Term{C, D} where {C, D} 
-    Term(-t.coeff,t.degree)  
+    Term{C, D}(-t.coeff, t.degree)  
 end
 
 """
@@ -118,14 +124,14 @@ end
 Multiply two terms (with the same coefficient/degree types).
 """
 function *(t1::Term{C, D}, t2::Term{C, D})::Term{C, D} where {C, D}
-    Term(t1.coeff * t2.coeff, t1.degree + t2.degree)
+    Term{C, D}(t1.coeff * t2.coeff, t1.degree + t2.degree)
 end
 
 """
 Multiply a term by a constant.
 """
 function *(t::Term{C, D}, n::S)::Term{C, D} where {C, D, S <: Integer}
-    Term(t.coeff * n, t.degree)
+    Term{C, D}(t.coeff * n, t.degree)
 end
 function *(n::S, t::Term{C, D})::Term{C, D} where {C, D, S <: Integer}
     t * n
@@ -135,21 +141,25 @@ end
 Power of a term.
 """
 function ^(t::Term{C, D}, n::S)::Term{C, D} where {C, D, S <: Integer}
-    Term(t.coeff^n, t.degree*D(n))
+    Term{C, D}(t.coeff^n, t.degree*D(n))
 end
 
 """
 Compute the symmetric mod of a term with an integer.
 """
 function mod(t::Term{C, D}, p::Integer)::Term{C, D} where {C <: Integer, D}
-    Term(mod(t.coeff, p), t.degree)
+    if C <: ZModP
+        return t 
+    else
+        Term{C, D}(mod(t.coeff, p), t.degree)
+    end
 end
 
 """
 Compute the derivative of a term.
 """
-function derivative(t::Term{C, D})::Term{C, D} where {C, D}  
-    Term{C, D}(t.coeff*C(t.degree),max(t.degree-one(D),zero(D)))
+function derivative(t::Term{C, D})::Term{C, D} where {C, D}
+    Term{C, D}(t.coeff * C(t.degree), max(t.degree - one(D), zero(D)))
 end
 
 """
@@ -157,9 +167,18 @@ Exact division when the coefficient type `C` is a field (e.g. Zp).
 
 You will need to override this in Task 5 for ZModP specifically.
 Do NOT modify this particular version of the function.
+
+Since division is defined for our zmodp object and it is indeed a field
+we can just call our defined function and julia will do the rest for us
+
+Initially wrong: Was just doing division and return numbers, not terms
 """
-function div(t1::Term{C, D}, t2::Term{C, D}) where {C, D} # Base.:÷
-    not_yet_implemented_error(t1, "div")
+function div(t1::Term{C, D}, t2::Term{C, D}) where {C, D}
+    @assert t1.degree >= t2.degree
+    if iszero(t1.coeff ÷ t2.coeff)
+        return zero(Term{C, D})
+    end
+    return Term{C, D}(t1.coeff ÷ t2.coeff, D(t1.degree - t2.degree))
 end
 
 """
@@ -171,8 +190,21 @@ There we can do exact division, so we can simply do `t1.coeff ÷ t2.coeff`.
 """
 function div_mod_p(t1::Term{C, D}, t2::Term{C, D}, prime::Integer) where {C, D}
     @assert t1.degree ≥ t2.degree
-    new_coeff = mod((mod(t1.coeff, prime) * int_inverse_mod(t2.coeff, prime)), prime)
-    return Term(new_coeff, t1.degree - t2.degree)
+    # convert from input type Term{C, D} to Term{ZModP{C, N}, D}
+    # anti dizzy comment: term constructor -> Term{C, D} where 
+    # C -> ZModP{C, prime}
+    # Term param (C, D) -> (ZModP{C, prime}, D)
+    # ZModP{C, Prime} also needs param which is coeff of term
+
+    # ---TERM CTOR -------TERM PARAM/ZMOD CTOR---ZMOD PARAM--D PART OF TERM
+    t1_z = Term{ZModP{C, prime}, D}(ZModP{C, prime}(t1.coeff), t1.degree)
+    t2_z = Term{ZModP{C, prime}, D}(ZModP{C, prime}(t2.coeff), t2.degree)
+    
+    # call div
+    zmod_obj = div(t1_z, t2_z)
+
+    # coeff is the value of the resultant zmod object
+    return Term{C, D}(C(zmod_obj.coeff), D(t1.degree - t2.degree))
 end
 
 """

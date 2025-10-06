@@ -40,7 +40,7 @@ leading coefficient.
 
 NOTE: Override this in Task 6 for Zp[x] and in Task 7 for Z[x].
 """
-function factor(::Type{C}, f::P)::Vector{Tuple{P, Integer}} where {C, P <: Polynomial}
+function factor(::Type{C}, f::P)::Vector{Tuple{P, Integer}} where {C, D, P <: Polynomial{C, D}}
     not_implemented_error(f, "factor")
 end
 
@@ -50,7 +50,7 @@ same concrete type).
 
 NOTE: Override this in Task 6 for Zp[x].
 """
-function div_rem(::Type{C}, num::P, den::P)::Tuple{P, P} where {C, P <: Polynomial}
+function div_rem(::Type{C}, num::P, den::P)::Tuple{P, P} where {C, D, P <: Polynomial{C, D}}
     not_implemented_error(num, "div_rem")
 end
 
@@ -63,7 +63,7 @@ product of the list is equal to `f`.
 
 NOTE: Override this in Task 6 for Zp[x].
 """
-function dd_factor(::Type{C}, f::P)::Array{P} where {C, P <: Polynomial}
+function dd_factor(::Type{C}, f::P)::Array{P} where {C, D, P <: Polynomial{C, D}}
     not_implemented_error(f, "dd_factor")
 end
 
@@ -75,7 +75,7 @@ that list is the polynomial `f`.
 
 NOTE: Override this in Task 6 for Zp[x].
 """
-function dd_split(::Type{C}, f::P, d::Integer)::Vector{P} where {C, P <: Polynomial}
+function dd_split(::Type{C}, f::P, d::Integer)::Vector{P} where {C, D, P <: Polynomial{C, D}}
     not_implemented_error(f, "dd_split")
 end
 
@@ -83,25 +83,29 @@ end
 Returns the quotient of num divided by den (where num/den have the 
 same concrete type) 
 """
-div(::Type{C}, num::P, den::P) where {C, P <: Polynomial} = first(div_rem(C, num, den))
+div(::Type{C}, num::P, den::P) where {C, D, P <: Polynomial{C, D}} = first(div_rem(C, num, den))
 
 """ 
 Returns the remainder of num divided by den (where num/den have the 
 same concrete type) 
 """
-rem(::Type{C}, num::P, den::P) where {C, P <: Polynomial} = last(div_rem(C, num, den))
+rem(::Type{C}, num::P, den::P) where {C, D, P <: Polynomial{C, D}} = last(div_rem(C, num, den))
 
 """
 The extended euclid algorithm for polynomials (of the same concrete subtype).
+
+https://edstem.org/au/courses/24848/discussion/2979071
+
+learnt this too late idk if this would fix anything but w/e
 """
-function extended_euclid_alg(::Type{C}, f::P, g::P) where {C, P <: Polynomial}
+function extended_euclid_alg(::Type{C}, f::P, g::P) where {C, D, P <: Polynomial{C, D}}
     return ext_euclid_alg(f, g, rem, div)
 end
 
 """
 The greatest common divisor of two polynomials (of the same concrete subtype).
 """
-gcd(::Type{C}, f::P, g::P) where {C, P <: Polynomial} = extended_euclid_alg(C, f, g) |> first
+gcd(::Type{C}, f::P, g::P) where {C, D, P <: Polynomial{C, D}} = extended_euclid_alg(C, f, g) |> first
 
 """
 Yun's algorithm to compute a square free polynomial can be performed over any so-called
@@ -123,7 +127,7 @@ Given F a characteristic zero or finite field and f a polynomial in F[x],
 https://en.wikipedia.org/wiki/Square-free_polynomial
 https://en.wikipedia.org/wiki/Perfect_field
 """
-function square_free(::Type{C}, f::P) where {C, P <: Polynomial}
+function square_free(::Type{C}, f::P) where {C, D, P <: Polynomial{C, D}}
     # Remove minimum degree (in case char(C) != 0)
     min_deg = last(f).degree
     vt = filter(t -> !iszero(t), collect(f))
@@ -149,7 +153,7 @@ end
 """
 Compute the number of times g divides f.
 """
-function multiplicity(::Type{C}, f::P, g::P)::Integer where {C, P <: Polynomial}
+function multiplicity(::Type{C}, f::P, g::P)::Integer where {C, D, P <: Polynomial{C, D}}
     degree(gcd(C, f, g)) == 0 && return 0
     return 1 + multiplicity(C, div(f, g), g)
 end

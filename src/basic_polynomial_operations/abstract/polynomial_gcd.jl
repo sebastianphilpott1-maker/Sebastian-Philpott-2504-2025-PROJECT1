@@ -13,24 +13,27 @@ Note, when working with polynomials over Z[x] we cannot compute the extended euc
 This is because we do not have division in Z[x]. Hence, we must drop to the field Zp[x] and compute the EEA
 with respect to some prime. 
 """
-function extended_euclid_alg_mod_p(a::P, b::P, prime::Integer) where {P <: Polynomial}
-    old_r, r = mod(a, prime), mod(b, prime)
-    old_s, s = one(P), zero(P)
-    old_t, t = zero(P), one(P)
+function extended_euclid_alg_mod_p(a::P, b::P, prime::Integer) where {C, D, P <: Polynomial{C, D}}
+    # if we have a polynomial that is already zmodp obj coeff, don't try convert it obviously
+    if C <: ZModP
+        return extended_euclid_alg(C, a, b)
+    else
+        # convert polynomials
+        poly_a = convert_polynomial(Val(prime), a)
+        poly_b = convert_polynomial(Val(prime), b)
 
-    while !iszero(mod(r,prime))
-        q = div_mod_p(old_r, r, prime)
-        old_r, r = r, mod(old_r - q*r, prime)
-        old_s, s = s, mod(old_s - q*s, prime)
-        old_t, t = t, mod(old_t - q*t, prime)
+        # call the one for zmodp objects
+        g, s, t = extended_euclid_alg(ZModP{C, prime}, poly_a, poly_b)
+
+        # convert back
+        g = convert_polynomial(Val(prime), g)
+        s = convert_polynomial(Val(prime), s)
+        t = convert_polynomial(Val(prime), t)
+        return g, s, t
     end
-    g, s, t = old_r, old_s, old_t
-
-    @assert mod(s*a + t*b - g, prime) == 0
-    return g, s, t  
 end
 
 """
 The GCD of two polynomials (of the same concrete subtype) modulo prime.
 """
-gcd_mod_p(a::P, b::P, prime::Integer) where {P <: Polynomial} = extended_euclid_alg_mod_p(a, b, prime) |> first
+gcd_mod_p(a::P, b::P, prime::Integer) where {C, D, P <: Polynomial{C, D}} = extended_euclid_alg_mod_p(a, b, prime) |> first
